@@ -3,13 +3,13 @@ export default function compile(code) {
     let compiler = new Compiler(tokens);
     let ret = compiler.compile();
     if (compiler.errored) {
-        return [null];
+        return { code: undefined, es: compiler.errors };
     }
-    return ret;
+    return { code: ret, es: compiler.errors };
 }
 
 function is_letter(char) {
-    return char.match(/^[A-Za-z_]+$/);
+    return char.match(/^[A-Za-z_.]+$/);
 }
 function is_num(char) {
     return char.match(/^[0-9]+$/);
@@ -20,6 +20,12 @@ function ident_lookup(ident) {
         return "MVR"
     } else if (ident == "mvm") {
         return "MVM"
+    } else if (ident == ".data") {
+        return "DATA"
+    } else if (ident == ".text") {
+        return "TEXT"
+    } else if (ident == ".bss") {
+        return "BSS"
     } else if (ident == "nop") {
         return "NOP"
     } else if (ident == "hlt") {
@@ -189,10 +195,39 @@ function num_to_bin(num) {
     }
     return num;
 }
+function is_inst(inst) {
+    if (inst == "MVR") {
+        return true;
+    } else if (inst == "MVM") {
+        return true;
+    } else if (inst == "NOP") {
+        return true;
+    } else if (inst == "HLT") {
+        return true;
+    } else if (inst == "ADD") {
+        return true;
+    } else if (inst == "SUB") {
+        return true;
+    } else if (inst == "WRT") {
+        return true;
+    } else if (inst == "PUSH") {
+        return true;
+    } else if (inst == "POP") {
+        return true;
+    } else if (inst == "JMP") {
+        return true;
+    } else if (inst == "JNZ") {
+        return true;
+    } else if (inst == "JZ") {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 class Compiler {
-    constructor(tokens, ram_size = 15) {
+    constructor(tokens = [], ram_size = 15) {
         this.tokens = tokens;
         this.pos = 0;
         this.token = this.tokens[0];
@@ -200,19 +235,82 @@ class Compiler {
         this.ram_size = ram_size;
         this.errored = false;
         this.labels = {}
+        this.vars = {};
         this.comment = false;
+        this.errors = [];
+        this.addr
     }
     error(msg) {
-        console.error("compiler error:", msg);
+        console.error("compiler error: " + msg + " on line " + this.line);
+        this.errors.push("compiler error: " + msg + " on line " + this.line)
         this.errored = true;
     }
     compile() {
+        this.hoist();
+        let mem = [];
+        while (this.pos < this.tokens.length && this.token.token_type != "EOF") {
+            if (this.token.token_type == "DATA") {
+                this.advance();
+                this.advance();
+                this.line += 1;
+                let ret = this.compile_data();
+                if (ret != undefined) {
+                    ret.forEach((e) => mem.push(e));
+                }
+            } else if (this.token.token_type == "TEXT") {
+                this.advance();
+                this.advance();
+                this.line += 1;
+                let ret = this.compile_text();
+                if (ret != undefined) {
+                    ret.forEach((e) => mem.push(e));
+                }
+            } else {
+                return this.error(`expected .text or .data found ${this.token.literal}`)
+            }
+        }
+        return mem
+    }
+    compile_data() {
         let lines = [];
         while (this.pos < this.tokens.length && this.token.token_type != "EOF") {
+            console.log("data token", this.token);
+            if (this.token.token_type == "TEXT") {
+                break;
+            }
+            if (this.token.token_type != "IDENT") {
+                return this.error(`expected ident found '${this.token.literal}'`);
+            }
+            let name = this.token.literal;
+            this.vars[name] = this.addr;
+            this.advance();
+
+            if (this.token.token_type != "NUM") {
+                return this.error(`expected number found ${this.token.literal}`)
+            }
+            let num = num_to_bin(this.token.literal);
+            lines.push(create_zeros(16 - num.length) + num)
+            this.advance();
+            if (this.token.token_type != "NL") {
+                return this.error(`expected newline found ${this.token.literal}`);
+            }
+            this.line += 1;
+            this.addr += 1;
+            this.advance();
+        }
+        return lines
+    }
+    compile_text() {
+        let lines = [];
+        while (this.pos < this.tokens.length && this.token.token_type != "EOF") {
+            console.log("text token", this.token);
+            if (this.token.token_type == "DATA") {
+                break;
+            }
+
             let t = this.token
             let line = this.compile_line();
             if (line != null && line != undefined) {
-                console.log("line", line.toString(2), typeof line, t)
                 lines.push(create_zeros(16 - line.toString(2)) + line.toString(2));
             }
             if (this.token.token_type == ";") {
@@ -225,15 +323,56 @@ class Compiler {
                 this.comment = false;
             }
             if (this.token.token_type != "NL" && this.token.token_type != "EOF") {
-                return this.error(`expected new line found '${this.token.literal}'. line ${this.line}`)
+                return this.error(`expected new line found '${this.token.literal}'.`)
             }
+            this.line += 1;
             if (this.errored) {
                 break;
             }
             this.advance()
-            this.line += 1;
         }
         return lines;
+    }
+    hoist() {
+        let pos = 0;
+        let curTok;
+        let peek;
+        let addr = 0;
+        let section = ""
+        while (pos < this.tokens.length - 1) { // - 1 because of the peek token
+            curTok = this.tokens[pos];
+            peek = this.tokens[pos + 1];
+            if (curTok.token_type == "TEXT") {
+                section = "text";
+            }
+            if (curTok.token_type == "DATA") {
+                section = "data";
+            }
+            if (section == "data") {
+                if (curTok.token_type == "IDENT") {
+                    addr += 1;
+                }
+            } else if (section == "text") {
+                if (is_inst(curTok.token_type)) {
+                    addr++;
+                    // while (curTok.token_type != "NL" && pos < this.tokens.length - 1) {
+                        //     console.log("curtok", curTok, )
+                        //     curTok = this.tokens[pos];
+                        //     peek = this.tokens[pos + 1];
+                        //     pos += 1;
+                        // }
+                }
+            }
+            console.log(`in hoist, curTok is`, curTok, `. peek is`, peek, "pos", pos, "toks.len", this.tokens.length, "section", section)
+            if (curTok.token_type == "IDENT" && peek.token_type == "COLIN") {
+                if (Object.keys(this.labels).includes(curTok.literal)) {
+                    return this.error(`lable '${curTok.literal}' is already defined on line ${this.labels[curTok.literal]}.`);
+                }
+                console.log("label added", curTok, addr)
+                this.labels[curTok.literal] = addr;
+            }
+            pos++;
+        }
     }
     compile_line() {
         if (this.token.token_type == "MVM") {
@@ -261,14 +400,10 @@ class Compiler {
         } else if (this.token.token_type == "JNZ") {
             return this.compile_jnz();
         } else if (this.token.token_type == "JZ") {
-            return this.compile_jz();
+            return this.compile_jnz();
         }
     }
     compile_ident() {
-        if (Object.keys(this.labels).includes(this.token.literal)) {
-            return this.error(`lable ${this.token.literal} is already defined on line ${this.labels[this.token.literal]}. line ${this.line}`);
-        }
-        this.labels[this.token.literal] = this.line;
         this.advance();
         if (this.token.token_type != "COLIN") {
             return this.error(`expected colin got '${this.token.literal}'`)
@@ -279,31 +414,43 @@ class Compiler {
     compile_jnz() {
         let out = ["1010"];
         this.advance();
+        this.addr++;
         return this.compile_value_lable(out);
     }
     compile_jz() {
         let out = ["1011"];
         this.advance();
+        this.addr++;
         return this.compile_value_lable(out);
     }
     compile_jmp() {
         let out = ["1001"];
         this.advance();
+        this.addr++;
         return this.compile_value_lable(out);
     }
     compile_pop() {
-        let out = ["1000"];
+        let out = ["1000", "0000"];
         this.advance();
-        return this.compile_value(out);
+
+        if (this.token.token_type != "REG") {
+            return this.error(`expected register found ${this.token.literal}`);
+        }
+        out.push(get_reg(this.token.literal, 8));
+        this.advance();
+        this.addr++;
+        return Number("0b" + out.join(""));
     }
     compile_push() {
         let out = ["0111"];
         this.advance();
+        this.addr++;
         return this.compile_value(out);
     }
     compile_wrt() {
         let out = ["0100"];
         this.advance();
+        this.addr++;
         return this.compile_value(out);
     }
     compile_value_lable(out) {
@@ -336,9 +483,9 @@ class Compiler {
             return this.error("expected ']'");
         }
         if (memaddr && !this.token.token_type == "RSQUAR") {
-            return this.error(`expected closing square bracket, found ${this.token.literal}. line ${this.line}`)
+            return this.error(`expected closing square bracket, found ${this.token.literal}. `)
         } else if (!memaddr && this.token.token_type == "RSQUAR") {
-            return this.error(`unexpected closing square bracket. line ${this.line}`)
+            return this.error(`unexpected closing square bracket.`)
         } else if (memaddr && this.token.token_type == "RSQUAR") {
             this.advance();
         }
@@ -381,9 +528,9 @@ class Compiler {
             return this.error("expected ']'");
         }
         if (memaddr && !this.token.token_type == "RSQUAR") {
-            return this.error(`expected closing square bracket, found ${this.token.literal}. line ${this.line}`)
+            return this.error(`expected closing square bracket, found ${this.token.literal}. `)
         } else if (!memaddr && this.token.token_type == "RSQUAR") {
-            return this.error(`unexpected closing square bracket. line ${this.line}`)
+            return this.error(`unexpected closing square bracket. `)
         } else if (memaddr && this.token.token_type == "RSQUAR") {
             this.advance();
         }
@@ -401,17 +548,18 @@ class Compiler {
         }
         out.push(o.join("") + "00")
         out.push(value)
-        console.log("out", out)
         return Number("0b" + out.join(""));
     }
     compile_sub() {
         let out = ["0011"];
         this.advance();
+        this.addr++;
         return this.compile_reg_value(out);
     }
     compile_add() {
         let out = ["0010"];
         this.advance();
+        this.addr++;
         return this.compile_reg_value(out);
     }
     compile_reg_value(out) {
@@ -445,15 +593,14 @@ class Compiler {
         } else {
             arg2 = create_zeros(7 - reg2.length) + reg2;
         }
-        console.log("literal", this.token, literal);
 
         if (this.advance() && memaddr && this.token.token_type == "RSQUAR") {
             return this.error("expected ]");
         }
         if (memaddr && !this.token.token_type == "RSQUAR") {
-            return this.error(`expected closing square bracket, found ${this.token.literal}. line ${this.line}`)
+            return this.error(`expected closing square bracket, found ${this.token.literal}. `)
         } else if (!memaddr && this.token.token_type == "RSQUAR") {
-            return this.error(`unexpected closing square bracket. line ${this.line}`)
+            return this.error(`unexpected closing square bracket. `)
         } else if (memaddr && this.token.token_type == "RSQUAR") {
             this.advance();
         }
@@ -472,15 +619,18 @@ class Compiler {
     }
     compile_nop() {
         this.advance();
+        this.addr++;
         return 0b0000000000000000
     }
     compile_hlt() {
         this.advance();
+        this.addr++;
         return 0b0001000000000000
     }
     compile_mvr() {
         let out = ["0110"];
         this.advance();
+        this.addr++;
         return this.compile_reg_value(out);
     }
     compile_mvm() {
@@ -516,6 +666,7 @@ class Compiler {
         }
         out.push(num)
         this.advance();
+        this.addr++;
         return Number("0b" + out.join(""))
     }
     advance() {
@@ -532,5 +683,4 @@ class Compiler {
         return false;
     }
 }
-
 
