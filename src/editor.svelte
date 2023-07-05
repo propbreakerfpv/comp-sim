@@ -10,6 +10,9 @@
     let files = [];
     let name = "unnamed";
     let hover = null;
+    let errors = [];
+    let value = "";
+    let lines = 20;
 
     try {
         if (browser && localStorage) {
@@ -27,7 +30,6 @@
         console.error("failed to read from localStorage", e);
     }
 
-    let lines = 16;
     function create_line_numbers() {
         let out = [];
         for (let i = 0; i < lines; i++) {
@@ -35,13 +37,12 @@
         }
         return out.join("");
     }
-    let value = "";
-    // compile("hello")
     function load() {
-        let comp = compile(value);
+        let {code, es} = compile(value);
+        errors = es;
         for (let i = 0; i < ram.length; i++) {
-            if (comp[i] != null && comp[i] != undefined) {
-                ram[i] = Number("0b" + comp[i]);
+            if (code[i] != null && code[i] != undefined) {
+                ram[i] = Number("0b" + code[i]);
             } else {
                 ram[i] = 0;
             }
@@ -53,7 +54,12 @@
             if (localStorage.getItem(name) == null) {
                 file_names.names.push(name);
                 localStorage.setItem("files", JSON.stringify(file_names));
+                files.push({name: name, file: value});
+                files = files; // we reasign files so svelte will rerender the file tree...
                 localStorage.setItem(name, value);
+            } else {
+                localStorage.setItem(name, value);
+                value = value
             }
         }
     }
@@ -79,13 +85,23 @@
     async function auto_save() {
         while (true) {
             if (name != "unnamed") {
-                console.log("saving");
+                // console.log("saving");
                 save();
             }
             await sleep(10000);
         }
     }
     auto_save();
+    function get_code({code, es}) {
+        console.log(es)
+        if (es != undefined || es != null) {
+            errors = es;
+        }
+        if (code == undefined || code == null) {
+            return []
+        }
+        return code
+    }
 </script>
 
 <div>
@@ -149,7 +165,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 disabled
-                value={compile(value)
+                value={get_code(compile(value))
                     .map((e) => {
                         if (e == null) {
                             return "";
@@ -161,9 +177,24 @@
             />
         </div>
     </div>
+    <div id="error-wrap">
+        {#each errors as error}
+            <h3 class="error">{error}</h3>
+        {/each}
+    </div>
 </div>
 
 <style>
+    #error-wrap {
+        background-color: #353837;
+        margin: 5px;
+        height: 200px;
+    }
+    .error {
+        background-color: red;
+        margin: 5px;
+        padding: 3px;
+    }
     .textarea {
         border-top: 5px solid yellow;
         border-left: 5px solid yellow;

@@ -25,7 +25,7 @@
     let rc = 0;
     let rd = 0;
     let fr = 0;
-    let sp = 0;
+    let sp = 15;
     let ram = new Array(16).fill(0);
     function get_reg(reg) {
         reg = reg & 0b111;
@@ -48,8 +48,8 @@
     }
     function set_reg(reg, val) {
         console.log(reg);
-        reg = reg & 0b0111;
-        val = val & 0b1111111;
+        reg = reg & 0b111;
+        val = val & 0b111_1111;
         console.log("set reg", reg, val);
         switch (reg) {
             case 0:
@@ -99,13 +99,20 @@
         running = false;
     }
     function reset() {
-        ram = [];
         running = false;
         play_pause = "PLAY";
+        ra = 0;
+        rb = 0;
+        rc = 0;
+        rd = 0;
+        pc = 0;
+        sp = 0;
+        ir = 0;
+        fr = 0;
+        cursor = 0;
+        config = 0;
         clock = 0;
-        for (let i = 0; i < ram_size; i++) {
-            ram.push(0);
-        }
+        display = new Array(32).fill(" ");
     }
     function get_arg_value(arg1, arg2) {
         let memadr = (arg1 & 8) >> 3;
@@ -116,7 +123,7 @@
             case 0:
                 return get_reg(arg2);
             case 1:
-                return arg2;
+                return arg2 & 0b0111_1111;
             case 2:
                 return ram[get_reg(arg2)];
             case 3:
@@ -133,7 +140,7 @@
             case 0:
                 return get_reg(arg2);
             case 1:
-                return arg2;
+                return arg2 & 0b0111_1111;
             case 2:
                 return ram[get_reg(arg2)];
             case 3:
@@ -174,6 +181,7 @@
                     break;
                 case 3:
                     alu_sum = get_reg(arg1) - get_arg_values(arg1, arg2);
+                    console.log("alu sum after sub is", alu_sum);
                     console.log("alu sum", alu_sum, "arg1", arg1, "arg2", arg2);
                     set_reg(arg1, alu_sum);
                     if (alu_sum == 0) {
@@ -216,20 +224,24 @@
                     break;
                 case 7:
                     // push
+                    ram[sp] = get_arg_value(arg1, arg2);
+                    sp --;
                     break;
                 case 8:
                     // pop
+                    sp ++;
+                    set_reg(arg2, ram[sp]);
                     break;
                 case 9:
                     pc = get_arg_value(arg1, arg2);
                     break;
                 case 10:
-                    if (fr == 0) {
+                    if (fr == 1) {
                         pc = get_arg_value(arg1, arg2);
                     }
                     break;
                 case 11:
-                    if (fr == 1) {
+                    if (fr == 0) {
                         pc = get_arg_value(arg1, arg2);
                     }
                     break;
@@ -258,7 +270,7 @@
     <Editor bind:editing bind:ram />
 {:else}
     <div class="wrapper">
-        <Ram bind:ram highlighted="3" size={ram_size} bind:pc />
+        <Ram bind:ram highlighted="3" size={ram_size} bind:pc bind:sp/>
         <Registers
             bind:ra
             bind:rb
