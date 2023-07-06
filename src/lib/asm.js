@@ -1,4 +1,7 @@
 export default function compile(code) {
+    if (code == null || code == undefined) {
+        return { code: [], es: ["code is undefined or null."] };
+    }
     let tokens = new Parser(code).parse();
     let compiler = new Compiler(tokens);
     let ret = compiler.compile();
