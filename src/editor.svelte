@@ -28,95 +28,40 @@
 
     try {
         if (browser && localStorage) {
-            if (localStorage.getItem("files") == null) {
-                localStorage.setItem('{"names": []}');
+            files = JSON.parse(localStorage.getItem("files")).files;
+            if (files == null) {
+                localStorage.setItem("files", '{"files": []}');
+                files = [];
             }
-            file_names = JSON.parse(localStorage.getItem("files"));
-            for (let f of file_names.names) {
-                if (browser && localStorage) {
-                    files.push({ name: f, value: localStorage.getItem(f) });
-                }
-            }
-
-            if (localStorage.getItem("__context__") == null) {
-                localStorage.setItem(
-                    "__context__",
-                    JSON.stringify({ file_name: "unnamed" })
-                );
-            }
-            context = JSON.parse(localStorage.getItem("__context__"));
-            name = context.file_name;
         }
     } catch (e) {
         console.error("failed to read from localStorage", e);
     }
 
     function rename_file() {
-        console.log("renameing", selected_file);
         renaming_file = selected_file;
     }
-    function rename_if_enter(e) {
-        if (e.key == "Enter") {
-            let old_name = files[renaming_file].name;
-            if (name == old_name) {
-                name = renaming_value;
-                context.file_name = name;
-            }
-            // console.log("files len", files.length);
-            files = files.map((e) => {
-                if (e.name == old_name) {
-                    e.name = renaming_value;
-                    console.log("e???", e);
+    function rename_if_enter(event) {
+        let old_name = files[renaming_file].name;
+        if (event.key == "Enter") {
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].name == old_name && i == renaming_file) {
+                    files[i].name = renaming_value;
                 }
-                return e;
-            });
-            // console.log("files", files);
-
-            // WHAT THE ACTUAL FUCK DO I NEED THIS FOR
-            // the map on files above this is somehow duplicating items and changing the value
-            // thing to file. i cant even remember what its call thats how frazled my brain is
-            // from debuging this lol
-            // now it not happening????????? WHAT THE FUCK IS GOING ON
-            files = files.filter((e) => {
-                // console.log("e??????", e)
-                e.file == undefined;
-            });
-
-            if (browser && localStorage) {
-                localStorage.removeItem(old_name);
             }
-            // console.log("files", files);
-            file_names.names = file_names.names.map((e, i) => {
-                if (i == renaming_file) {
-                    return renaming_value;
-                } else {
-                    return e;
-                }
-            });
-            // console.log("files", files, "file_names", file_names);
             save();
             renaming_file = null;
-            console.log(e);
+            if (name == "unnamed") {
+                name = renaming_value;
+            }
         }
     }
     function delete_file() {
-        console.log("deleting", selected_file);
-        let name = files[selected_file].name;
-        files = files.filter((_, i) => i != selected_file);
-        file_names.names = file_names.names.filter((e) => e != name);
-
-        if (browser && localStorage) {
-            console.log("name", name);
-            localStorage.setItem("files", JSON.stringify(file_names));
-            localStorage.removeItem(name);
-        }
+        files = files.filter((_, i) => i != selected_file)
+        save();
     }
     function new_file() {
-        save();
-        value = "";
-        name = "unnamed";
-        files.push({name: "unnamed", value: ""});
-        file_names.names.push("unnamed");
+        files.push({ name: "unnamed", value: "" });
         renaming_file = files.length - 1;
     }
     function create_line_numbers() {
@@ -139,25 +84,19 @@
         editing = false;
     }
     function save() {
-        console.log("saving");
         if (browser && localStorage) {
-            if (localStorage.getItem(name) == null) {
-                if (!file_names.names.includes(name)) {
-                    file_names.names.push(name);
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].name == name) {
+                    files[i].value = value;
                 }
-                localStorage.setItem("files", JSON.stringify(file_names));
-                files.push({ name: name, file: value });
-                files = files; // we reasign files so svelte will rerender the file tree...
-                localStorage.setItem(name, value);
-            } else {
-                localStorage.setItem(name, value);
-                value = value;
             }
+
+            localStorage.setItem("files", JSON.stringify({ files: files }));
         }
     }
     function select_file(file) {
         if (browser && localStorage) {
-            if (value.length > 0) {
+            if (value != null && value.length > 0) {
                 save();
             }
             value = localStorage.getItem(file);
