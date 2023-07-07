@@ -11,8 +11,8 @@
         font-size: 1rem;
         margin: 5px;
         padding: 5px;
-        /* width: 180px; */
-        background-color: #606060;
+        width: 165px;
+        background-color: var(--background);
         border-radius: 5px;
         border: none;
     }

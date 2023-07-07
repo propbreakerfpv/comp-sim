@@ -9,4 +9,30 @@
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Narnoor&display=swap');
+        * {
+            font-family: 'Narnoor', serif;
+            background-color: #2d3947;
+            color: #c3cfdd;
+        }
+        :root {
+            --background: #2d3947;
+            --section-background: #4f647c;
+            --color: #c3cfdd;
+            --button: #1d232b;
+            --button-hover: #272e38;
+            --borders: #3a5577;
+        }
+        button {
+            background-color: #1d232b;
+            border: none;
+            padding-bottom: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #272e38;
+        }
+    </style>
+
 </html>

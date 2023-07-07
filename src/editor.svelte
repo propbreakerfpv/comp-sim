@@ -2,7 +2,7 @@
     import compile from "./lib/asm";
     import format_num from "./lib/number";
     import { browser } from "$app/environment";
-    import sleep from "./lib/helpers";
+    import ContextMenu from "./context_menu.svelte";
 
     export let editing;
     export let ram;
@@ -10,19 +10,37 @@
     let files = [];
     let name = "unnamed";
     let hover = null;
+    let show_opt = null;
     let errors = [];
     let value = "";
     let lines = 20;
+    let context_menu = {};
+    let selected_file = null;
+    let renaming_file = null;
+    let renaming_value = "";
+    let context = { file_name: "unnamed" };
+    let items = [
+        { label: "rename", handler: rename_file },
+        { label: "delete", handler: delete_file },
+        { label: "new", handler: new_file },
+    ];
 
     try {
         if (browser && localStorage) {
-            if (localStorage.getItem("files") == null) {
-                localStorage.setItem('{"names": []}');
+            files = JSON.parse(localStorage.getItem("files")).files;
+            if (files == null) {
+                localStorage.setItem("files", '{"files": []}');
+                files = [];
             }
-            file_names = JSON.parse(localStorage.getItem("files"));
-            for (let f of file_names.names) {
-                if (browser && localStorage) {
-                    files.push({ name: f, value: localStorage.getItem(f) });
+            context = JSON.parse(localStorage.getItem("__context__"));
+            if (context == null) {
+                localStorage.setItem("files", '{"file_name": "unnamed"}');
+                context = { file_name: "unnamed" };
+            }
+            name = context.file_name;
+            for (let i = 0; i < files.length; i ++) {
+                if (files[i].name == name) {
+                    value = files[i].value;
                 }
             }
         }
@@ -30,6 +48,32 @@
         console.error("failed to read from localStorage", e);
     }
 
+    function rename_file() {
+        renaming_file = selected_file;
+    }
+    function rename_if_enter(event) {
+        let old_name = files[renaming_file].name;
+        if (event.key == "Enter") {
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].name == old_name && i == renaming_file) {
+                    files[i].name = renaming_value;
+                }
+            }
+            save();
+            renaming_file = null;
+            if (name == old_name) {
+                name = renaming_value;
+            }
+        }
+    }
+    function delete_file() {
+        files = files.filter((_, i) => i != selected_file)
+        save();
+    }
+    function new_file() {
+        files.push({ name: "unnamed", value: "" });
+        renaming_file = files.length - 1;
+    }
     function create_line_numbers() {
         let out = [];
         for (let i = 0; i < lines; i++) {
@@ -38,7 +82,7 @@
         return out.join("");
     }
     function load() {
-        let {code, es} = compile(value);
+        let { code, es } = compile(value);
         errors = es;
         for (let i = 0; i < ram.length; i++) {
             if (code[i] != null && code[i] != undefined) {
@@ -51,56 +95,53 @@
     }
     function save() {
         if (browser && localStorage) {
-            if (localStorage.getItem(name) == null) {
-                file_names.names.push(name);
-                localStorage.setItem("files", JSON.stringify(file_names));
-                files.push({name: name, file: value});
-                files = files; // we reasign files so svelte will rerender the file tree...
-                localStorage.setItem(name, value);
-            } else {
-                localStorage.setItem(name, value);
-                value = value
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].name == name && value != null){
+                    console.log("file", files[i])
+                    files[i].value = value;
+                }
             }
+
+            localStorage.setItem("files", JSON.stringify({ files: files }));
+            context.file_name = name;
+            localStorage.setItem("__context__", JSON.stringify(context));
         }
     }
-    function select_file(e) {
-        let file = e.target.innerText;
+    function select_file(file) {
         if (browser && localStorage) {
-            if (value.length > 0) {
+            if (value != null && value.length > 0) {
                 save();
             }
             value = localStorage.getItem(file);
             name = file;
+            context.file_name = file;
+            localStorage.setItem("__context__", JSON.stringify(context));
         }
     }
     function display_delete_btn(idx) {
         hover = idx;
     }
-    function delete_file(name) {
-        localStorage.removeItem(name.name);
-        files = files.filter((e) => e.name != name.name);
-        file_names.names = file_names.names.filter((e) => e != name.name);
-        localStorage.setItem("files", JSON.stringify(file_names));
+    function show_file_options(idx) {
+        selected_file = idx;
+        let e = new Event("ContextMenu");
+        e.pageY = window.event.clientY;
+        e.pageX = window.event.clientX;
+        context_menu.show(e);
     }
-    async function auto_save() {
-        while (true) {
-            if (name != "unnamed") {
-                // console.log("saving");
-                save();
-            }
-            await sleep(10000);
-        }
+    function auto_save(_) {
+        save();
     }
-    auto_save();
-    function get_code({code, es}) {
-        console.log(es)
+    $: auto_save(value);
+    // auto_save();
+    function get_code({ code, es }) {
+        console.log(es);
         if (es != undefined || es != null) {
             errors = es;
         }
         if (code == undefined || code == null) {
-            return []
+            return [];
         }
-        return code
+        return code;
     }
 </script>
 
@@ -109,24 +150,46 @@
         <button on:click={load}>load</button>
         <button on:click={save}>save</button>
     </div>
-    <div><input type="text" bind:value={name} /></div>
+    <div>
+        <button on:click={new_file}>new</button>
+        <h2 id="name">{name}</h2>
+    </div>
     <div id="horazantal">
         <div id="file-tree">
             {#each files as file, idx}
                 <div class="file-name-wrapper">
                     <div
                         on:mouseover={() => display_delete_btn(idx)}
-                        on:click={select_file}
+                        on:click={() => select_file(file.name)}
                         class="file-name"
                     >
-                        {file.name}
+                        {#if renaming_file == idx}
+                            <form>
+                                <input
+                                    bind:value={renaming_value}
+                                    on:keypress={rename_if_enter}
+                                    id="renaming"
+                                    type="text"
+                                />
+                            </form>
+                        {:else}
+                            {file.name}
+                        {/if}
+                        {#if hover == idx}
+                            <button
+                                on:click|stopPropagation={() =>
+                                    show_file_options(idx)}
+                                class="delete-btn">⋮</button
+                            >
+                        {/if}
+                        {#if show_opt == idx}
+                            <div class="opts">
+                                <button>rename</button>
+                                <button>delete</button>
+                                <button>new</button>
+                            </div>
+                        {/if}
                     </div>
-                    {#if hover == idx}
-                        <button
-                            on:click|stopPropagation={() => delete_file(file)}
-                            class="delete-btn">🗑</button
-                        >
-                    {/if}
                 </div>
             {/each}
         </div>
@@ -136,7 +199,7 @@
                 readonly
                 name="editor"
                 id="line-numbers"
-                cols="2"
+                cols="1"
                 rows={lines}
                 autocorrect="off"
                 spellcheck="false"
@@ -152,7 +215,7 @@
                 rows={lines}
                 autocorrect="off"
                 spellcheck="false"
-                bind:value
+                bind:value={value}
             />
             <div class="seperator" />
             <textarea
@@ -183,23 +246,51 @@
         {/each}
     </div>
 </div>
+<ContextMenu bind:this={context_menu} {items} />
 
 <style>
+    #name {
+        display: inline;
+        margin-left: 70px;
+    }
+    .opts {
+        position: relative;
+        left: -40px;
+        top: 20px;
+        background-color: black;
+        padding: 5px 0px 5px 0px;
+        height: 65px;
+    }
+    .opts > button:hover {
+        background-color: #555857;
+    }
+    .opts > button {
+        border: none;
+        margin: 2px 0px 2px 0px;
+        background-color: #353837;
+        color: white;
+        width: 100%;
+        cursor: pointer;
+    }
     #error-wrap {
+        border: 5px solid var(--borders);
         background-color: #353837;
         margin: 5px;
         height: 200px;
     }
     .error {
-        background-color: red;
+        background-color: #874742;
         margin: 5px;
         padding: 3px;
+        padding-bottom: 7px;
     }
     .textarea {
-        border-top: 5px solid yellow;
-        border-left: 5px solid yellow;
-        border-bottom: 5px solid yellow;
+        border-top: 5px solid var(--borders);
+        border-left: 5px solid var(--borders);
+        border-bottom: 5px solid var(--borders);
         border-right: none;
+        padding: 10px;
+        resize: none;
     }
     /* .seperator { */
     /*     background-color: yellow; */
@@ -207,16 +298,20 @@
     /* } */
     .file-name-wrapper {
         display: flex;
+        justify-content: space-between;
+        height: 35px;
     }
     .delete-btn:hover {
-        background-color: #6c706f;
+        background-color: #424d5e;
     }
     .delete-btn {
-        font-size: 18px;
+        /* font-size: 18px; */
         padding: 0px;
         padding-left: 5px;
+        padding-right: 5px;
         margin: 0px;
-        background-color: #353837;
+        margin-left: 5px;
+        background-color: #353f4c;
         border: none;
         color: white;
         cursor: pointer;
@@ -224,18 +319,20 @@
     #file-tree {
         margin-right: 5px;
         margin-top: 1px;
+        width: 100px;
     }
     .file-name {
-        display: flex;
-        justify-content: space-between;
+        display: inline;
         padding: 5px;
+        /* padding-bottom: 32px; */
         margin: 2px;
-        background-color: #353837;
+        background-color: #1d232b;
         color: white;
         cursor: pointer;
+        width: 100%;
     }
     .file-name:hover {
-        background-color: #4a4c4b;
+        background-color: var(--button-hover);
     }
     #horazantal {
         display: flex;
@@ -247,11 +344,18 @@
         background-color: #353837;
         font-size: 20px;
         color: white;
-        border-right: 5px solid yellow;
+        border-right: 5px solid var(--borders);
+    }
+    *:focus {
+        outline: none;
+    }
+    text.middle:focus {
+        outline-width: 0;
     }
     #line-numbers {
         background-color: #353837;
         font-size: 20px;
+        width: 30px;
         color: white;
     }
     #controles {

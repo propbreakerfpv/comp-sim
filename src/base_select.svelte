@@ -8,7 +8,7 @@
             e.target.parentElement.parentElement.children[i].children[0].style.backgroundColor = "";
             e.target.parentElement.parentElement.children[i].children[0].id = "";
         }
-        e.target.style.backgroundColor = "red";
+        e.target.style.backgroundColor = "#874742";
         if (e.target.innerText == "Decmal") {
             base = 10;
             dispatch('base', base);
@@ -37,7 +37,7 @@
 
 <style>
     #start {
-        background-color: red;
+        background-color: #874742;
     }
     #wrapper {
         display: flex;
@@ -45,6 +45,7 @@
         margin: 5px;
         margin-bottom: 10px;
         justify-content: center;
+        background-color: var(--section-background);
     }
     .button {
         border: none;
@@ -55,6 +56,7 @@
     }
     .container {
         display: inline;
+        background-color: var(--section-background);
         /* padding: 5px; */
     }
 </style>
