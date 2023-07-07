@@ -51,7 +51,7 @@
             }
             save();
             renaming_file = null;
-            if (name == "unnamed") {
+            if (name == old_name) {
                 name = renaming_value;
             }
         }
