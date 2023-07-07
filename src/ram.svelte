@@ -108,7 +108,7 @@
         display: flex;
         flex-direction: column;
         width: 248px;
-        background-color: #353837;
+        background-color: var(--section-background);
         border-radius: 5px;
     }
     #name {
@@ -130,20 +130,18 @@
         margin-left: 0px;
         border: 5px solid #0505fc;
     }
-    .value {
-        width: 180px;
-    }
     .idx {
         width: 30px;
         margin: 5px;
         padding: 5px;
         text-align: right;
-        background-color: #606060;
+        background-color: var(--background);
         border-radius: 5px;
     }
     .el {
         display: flex;
         margin-left: 5px;
         margin-right: 5px;
+        background-color: var(--section-background);
     }
 </style>

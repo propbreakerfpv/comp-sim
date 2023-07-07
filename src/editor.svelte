@@ -2,7 +2,6 @@
     import compile from "./lib/asm";
     import format_num from "./lib/number";
     import { browser } from "$app/environment";
-    import sleep from "./lib/helpers";
     import ContextMenu from "./context_menu.svelte";
 
     export let editing;
@@ -32,6 +31,17 @@
             if (files == null) {
                 localStorage.setItem("files", '{"files": []}');
                 files = [];
+            }
+            context = JSON.parse(localStorage.getItem("__context__"));
+            if (context == null) {
+                localStorage.setItem("files", '{"file_name": "unnamed"}');
+                context = { file_name: "unnamed" };
+            }
+            name = context.file_name;
+            for (let i = 0; i < files.length; i ++) {
+                if (files[i].name == name) {
+                    value = files[i].value;
+                }
             }
         }
     } catch (e) {
@@ -86,12 +96,15 @@
     function save() {
         if (browser && localStorage) {
             for (let i = 0; i < files.length; i++) {
-                if (files[i].name == name) {
+                if (files[i].name == name && value != null){
+                    console.log("file", files[i])
                     files[i].value = value;
                 }
             }
 
             localStorage.setItem("files", JSON.stringify({ files: files }));
+            context.file_name = name;
+            localStorage.setItem("__context__", JSON.stringify(context));
         }
     }
     function select_file(file) {
@@ -115,15 +128,10 @@
         e.pageX = window.event.clientX;
         context_menu.show(e);
     }
-    async function auto_save() {
-        while (true) {
-            if (name != "unnamed") {
-                // console.log("saving");
-                save();
-            }
-            await sleep(10000);
-        }
+    function auto_save(_) {
+        save();
     }
+    $: auto_save(value);
     // auto_save();
     function get_code({ code, es }) {
         console.log(es);
@@ -191,7 +199,7 @@
                 readonly
                 name="editor"
                 id="line-numbers"
-                cols="2"
+                cols="1"
                 rows={lines}
                 autocorrect="off"
                 spellcheck="false"
@@ -207,7 +215,7 @@
                 rows={lines}
                 autocorrect="off"
                 spellcheck="false"
-                bind:value
+                bind:value={value}
             />
             <div class="seperator" />
             <textarea
@@ -265,20 +273,24 @@
         cursor: pointer;
     }
     #error-wrap {
+        border: 5px solid var(--borders);
         background-color: #353837;
         margin: 5px;
         height: 200px;
     }
     .error {
-        background-color: red;
+        background-color: #874742;
         margin: 5px;
         padding: 3px;
+        padding-bottom: 7px;
     }
     .textarea {
-        border-top: 5px solid yellow;
-        border-left: 5px solid yellow;
-        border-bottom: 5px solid yellow;
+        border-top: 5px solid var(--borders);
+        border-left: 5px solid var(--borders);
+        border-bottom: 5px solid var(--borders);
         border-right: none;
+        padding: 10px;
+        resize: none;
     }
     /* .seperator { */
     /*     background-color: yellow; */
@@ -286,10 +298,11 @@
     /* } */
     .file-name-wrapper {
         display: flex;
+        justify-content: space-between;
         height: 35px;
     }
     .delete-btn:hover {
-        background-color: #6c706f;
+        background-color: #424d5e;
     }
     .delete-btn {
         /* font-size: 18px; */
@@ -298,7 +311,7 @@
         padding-right: 5px;
         margin: 0px;
         margin-left: 5px;
-        background-color: #353837;
+        background-color: #353f4c;
         border: none;
         color: white;
         cursor: pointer;
@@ -309,17 +322,17 @@
         width: 100px;
     }
     .file-name {
-        display: flex;
-        justify-content: space-between;
+        display: inline;
         padding: 5px;
+        /* padding-bottom: 32px; */
         margin: 2px;
-        background-color: #353837;
+        background-color: #1d232b;
         color: white;
         cursor: pointer;
         width: 100%;
     }
     .file-name:hover {
-        background-color: #4a4c4b;
+        background-color: var(--button-hover);
     }
     #horazantal {
         display: flex;
@@ -331,11 +344,18 @@
         background-color: #353837;
         font-size: 20px;
         color: white;
-        border-right: 5px solid yellow;
+        border-right: 5px solid var(--borders);
+    }
+    *:focus {
+        outline: none;
+    }
+    text.middle:focus {
+        outline-width: 0;
     }
     #line-numbers {
         background-color: #353837;
         font-size: 20px;
+        width: 30px;
         color: white;
     }
     #controles {

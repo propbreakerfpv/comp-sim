@@ -64,11 +64,9 @@
     .contextmenu {
         display: none;
         flex-direction: column;
-        border: solid 1px #c5c5c5;
-        border-radius: 3px;
         gap: 5px;
         position: absolute;
-        background: #e5e5e5;
+        background: #415266;
         min-width: 120px;
     }
     button {
@@ -85,7 +83,7 @@
         place-items: center;
     }
     button:hover {
-        background: #f4f4f4;
+        background: #4f647c;
     }
     .shortcut {
         color: #666;

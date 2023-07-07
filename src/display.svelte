@@ -122,7 +122,8 @@
     #display {
         margin: 5px;
         padding: 5px;
-        background-color: #606060;
+        /* background-color: #4e4f4e; */
+        /* background-color: var(--section-background); */
         border-radius: 5px;
     }
     #wrapper {
@@ -131,18 +132,20 @@
         display: flex;
         flex-direction: column;
         width: 340px;
-        background-color: #353837;
+        background-color: var(--section-background);
         border-radius: 5px;
     }
     .name {
         margin: 0px;
         padding: 5px;
         color: white;
+        background-color: var(--section-background);
     }
-    .reg {
+    .config {
         margin: 5px;
         padding: 5px;
-        background-color: #606060;
+        width: 165px;
+        background-color: var(--background);
         border-radius: 5px;
     }
 </style>

@@ -1,6 +1,6 @@
 export default function compile(code) {
     if (code == null || code == undefined) {
-        return { code: [], es: ["code is undefined or null."] };
+        return { code: [], es: [] };
     }
     let tokens = new Parser(code).parse();
     let compiler = new Compiler(tokens);
@@ -277,7 +277,6 @@ class Compiler {
     compile_data() {
         let lines = [];
         while (this.pos < this.tokens.length && this.token.token_type != "EOF") {
-            console.log("data token", this.token);
             if (this.token.token_type == "TEXT") {
                 break;
             }
@@ -306,7 +305,6 @@ class Compiler {
     compile_text() {
         let lines = [];
         while (this.pos < this.tokens.length && this.token.token_type != "EOF") {
-            console.log("text token", this.token);
             if (this.token.token_type == "DATA") {
                 break;
             }
@@ -366,12 +364,10 @@ class Compiler {
                         // }
                 }
             }
-            console.log(`in hoist, curTok is`, curTok, `. peek is`, peek, "pos", pos, "toks.len", this.tokens.length, "section", section)
             if (curTok.token_type == "IDENT" && peek.token_type == "COLIN") {
                 if (Object.keys(this.labels).includes(curTok.literal)) {
                     return this.error(`lable '${curTok.literal}' is already defined on line ${this.labels[curTok.literal]}.`);
                 }
-                console.log("label added", curTok, addr)
                 this.labels[curTok.literal] = addr;
             }
             pos++;

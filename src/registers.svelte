@@ -164,19 +164,21 @@
         display: flex;
         flex-direction: column;
         width: 200px;
-        background-color: #353837;
+        background-color: var(--section-background);
         border-radius: 5px;
     }
     .name {
         margin: 0px;
         padding: 5px;
         color: white;
+        background-color: var(--section-background);
     }
     .reg {
-        /* display: inline; */
+        display: inline;
         margin: 5px;
         padding: 5px;
-        background-color: #606060;
+        background-color: var(--background);
         border-radius: 5px;
+        width: 165px;
     }
 </style>
