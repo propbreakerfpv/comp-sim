@@ -6,7 +6,6 @@
 
     export let editing;
     export let ram;
-    let file_names = { names: [] };
     let files = [];
     let name = "unnamed";
     let hover = null;
@@ -38,7 +37,7 @@
                 context = { file_name: "unnamed" };
             }
             name = context.file_name;
-            for (let i = 0; i < files.length; i ++) {
+            for (let i = 0; i < files.length; i++) {
                 if (files[i].name == name) {
                     value = files[i].value;
                 }
@@ -67,7 +66,17 @@
         }
     }
     function delete_file() {
-        files = files.filter((_, i) => i != selected_file)
+        let selected_name = "";
+        files.forEach((e, i) => {
+            if (i == selected_file) {
+                selected_name = e.name;
+            }
+        });
+        files = files.filter((_, i) => i != selected_file);
+        if (name == selected_name) {
+            name = files[files.length - 1].name;
+            value = files[files.length - 1].value;
+        }
         save();
     }
     function new_file() {
@@ -96,8 +105,8 @@
     function save() {
         if (browser && localStorage) {
             for (let i = 0; i < files.length; i++) {
-                if (files[i].name == name && value != null){
-                    console.log("file", files[i])
+                if (files[i].name == name && value != null) {
+                    console.log("file", files[i]);
                     files[i].value = value;
                 }
             }
@@ -112,9 +121,13 @@
             if (value != null && value.length > 0) {
                 save();
             }
-            value = localStorage.getItem(file);
-            name = file;
-            context.file_name = file;
+            for (let e of files) {
+                if (e.name == file) {
+                    value = e.value;
+                    name = e.name;
+                    context.file_name = e.name;
+                }
+            }
             localStorage.setItem("__context__", JSON.stringify(context));
         }
     }
@@ -157,39 +170,37 @@
     <div id="horazantal">
         <div id="file-tree">
             {#each files as file, idx}
-                <div class="file-name-wrapper">
-                    <div
-                        on:mouseover={() => display_delete_btn(idx)}
-                        on:click={() => select_file(file.name)}
-                        class="file-name"
-                    >
-                        {#if renaming_file == idx}
-                            <form>
-                                <input
-                                    bind:value={renaming_value}
-                                    on:keypress={rename_if_enter}
-                                    id="renaming"
-                                    type="text"
-                                />
-                            </form>
-                        {:else}
-                            {file.name}
-                        {/if}
-                        {#if hover == idx}
-                            <button
-                                on:click|stopPropagation={() =>
-                                    show_file_options(idx)}
-                                class="delete-btn">⋮</button
-                            >
-                        {/if}
-                        {#if show_opt == idx}
-                            <div class="opts">
-                                <button>rename</button>
-                                <button>delete</button>
-                                <button>new</button>
-                            </div>
-                        {/if}
-                    </div>
+                <div
+                    on:mouseover={() => display_delete_btn(idx)}
+                    on:click={() => select_file(file.name)}
+                    class="file-name"
+                >
+                    {#if renaming_file == idx}
+                        <form>
+                            <input
+                                bind:value={renaming_value}
+                                on:keypress={rename_if_enter}
+                                id="renaming"
+                                type="text"
+                            />
+                        </form>
+                    {:else}
+                        {file.name}
+                    {/if}
+                    {#if hover == idx}
+                        <button
+                            on:click|stopPropagation={() =>
+                                show_file_options(idx)}
+                            class="delete-btn">⋮</button
+                        >
+                    {/if}
+                    {#if show_opt == idx}
+                        <div class="opts">
+                            <button>rename</button>
+                            <button>delete</button>
+                            <button>new</button>
+                        </div>
+                    {/if}
                 </div>
             {/each}
         </div>
@@ -215,7 +226,7 @@
                 rows={lines}
                 autocorrect="off"
                 spellcheck="false"
-                bind:value={value}
+                bind:value
             />
             <div class="seperator" />
             <textarea
@@ -292,25 +303,17 @@
         padding: 10px;
         resize: none;
     }
-    /* .seperator { */
-    /*     background-color: yellow; */
-    /*     width: 5px; */
-    /* } */
-    .file-name-wrapper {
-        display: flex;
-        justify-content: space-between;
-        height: 35px;
-    }
     .delete-btn:hover {
         background-color: #424d5e;
     }
     .delete-btn {
         /* font-size: 18px; */
         padding: 0px;
-        padding-left: 5px;
-        padding-right: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
         margin: 0px;
-        margin-left: 5px;
+        margin-left: 10px;
+        margin-right: 10px;
         background-color: #353f4c;
         border: none;
         color: white;
@@ -322,9 +325,9 @@
         width: 100px;
     }
     .file-name {
-        display: inline;
+        display: flex;
+        justify-content: space-between;
         padding: 5px;
-        /* padding-bottom: 32px; */
         margin: 2px;
         background-color: #1d232b;
         color: white;
