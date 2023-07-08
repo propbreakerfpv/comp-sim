@@ -455,10 +455,8 @@ class Compiler {
             }
         }
         let value = get_reg(this.token.literal, 8)
-        let variable = false;
         let literal = false;
         if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
-            variable = true;
             literal = true;
             let v = this.vars[this.token.literal].toString(2);
             value = create_zeros(8 - v.length) + v;
@@ -491,7 +489,7 @@ class Compiler {
         }
 
         let o = [];
-        if (memaddr || variable) {
+        if (memaddr) {
             o.push("1")
         } else {
             o.push("0")
@@ -515,11 +513,12 @@ class Compiler {
         }
         let value = get_reg(this.token.literal)
 
-        let variable = false
+        // let variable = false
         let literal = false;
         console.log("this.vars", this.vars);
         if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
-            variable = true;
+            console.log("var", this.token.literal, "memaddr", memaddr);
+            // variable = true;
             literal = true;
             let v = this.vars[this.token.literal].toString(2);
             value = create_zeros(8 - v.length) + v;
@@ -546,7 +545,7 @@ class Compiler {
         }
 
         let o = [];
-        if (memaddr || variable) {
+        if (memaddr) {
             o.push("1")
         } else {
             o.push("0")
@@ -588,11 +587,10 @@ class Compiler {
             }
         }
         let reg2 = get_reg(this.token.literal)
-        let variable = false;
         let literal = false;
         let literal_val;
         if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
-            variable = true;
+            // variable = true;
             literal = true;
             literal_val = num_to_bin(this.vars[this.token.literal]);
             reg2 = "";
@@ -622,7 +620,7 @@ class Compiler {
             this.advance();
         }
 
-        if (memaddr || variable) {
+        if (memaddr) {
             out.push("1" + reg)
         } else {
             out.push("0" + reg)

@@ -210,7 +210,7 @@
                         memaddress = get_reg(arg2);
                     }
                     if (memadr) {
-                        ram[memaddress] = arg1;
+                        ram[memaddress] = arg1 & 0b111;
                     } else {
                         ram[memaddress] = get_reg(arg1);
                     }
