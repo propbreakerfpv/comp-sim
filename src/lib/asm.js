@@ -241,7 +241,7 @@ class Compiler {
         this.vars = {};
         this.comment = false;
         this.errors = [];
-        this.addr
+        this.addr = 0;
     }
     error(msg) {
         console.error("compiler error: " + msg + " on line " + this.line);
@@ -284,6 +284,7 @@ class Compiler {
                 return this.error(`expected ident found '${this.token.literal}'`);
             }
             let name = this.token.literal;
+            console.log("var will be", this.addr)
             this.vars[name] = this.addr;
             this.advance();
 
@@ -309,7 +310,6 @@ class Compiler {
                 break;
             }
 
-            let t = this.token
             let line = this.compile_line();
             if (line != null && line != undefined) {
                 lines.push(create_zeros(16 - line.toString(2)) + line.toString(2));
@@ -356,12 +356,6 @@ class Compiler {
             } else if (section == "text") {
                 if (is_inst(curTok.token_type)) {
                     addr++;
-                    // while (curTok.token_type != "NL" && pos < this.tokens.length - 1) {
-                        //     console.log("curtok", curTok, )
-                        //     curTok = this.tokens[pos];
-                        //     peek = this.tokens[pos + 1];
-                        //     pos += 1;
-                        // }
                 }
             }
             if (curTok.token_type == "IDENT" && peek.token_type == "COLIN") {
@@ -460,9 +454,16 @@ class Compiler {
                 return this.error("expected register or number");
             }
         }
-        let value = get_reg(this.token.literal)
-        // let literal_val;
+        let value = get_reg(this.token.literal, 8)
+        let variable = false;
         let literal = false;
+        if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
+            variable = true;
+            literal = true;
+            let v = this.vars[this.token.literal].toString(2);
+            value = create_zeros(8 - v.length) + v;
+        }
+        // let literal_val;
         if (value == null) {
             literal = true;
             value = num_to_bin(this.token.literal);
@@ -490,7 +491,7 @@ class Compiler {
         }
 
         let o = [];
-        if (memaddr) {
+        if (memaddr || variable) {
             o.push("1")
         } else {
             o.push("0")
@@ -513,7 +514,17 @@ class Compiler {
             }
         }
         let value = get_reg(this.token.literal)
+
+        let variable = false
         let literal = false;
+        console.log("this.vars", this.vars);
+        if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
+            variable = true;
+            literal = true;
+            let v = this.vars[this.token.literal].toString(2);
+            value = create_zeros(8 - v.length) + v;
+        }
+
         if (value == null) {
             literal = true;
             value = num_to_bin(this.token.literal);
@@ -535,7 +546,7 @@ class Compiler {
         }
 
         let o = [];
-        if (memaddr) {
+        if (memaddr || variable) {
             o.push("1")
         } else {
             o.push("0")
@@ -577,8 +588,15 @@ class Compiler {
             }
         }
         let reg2 = get_reg(this.token.literal)
-        let literal_val;
+        let variable = false;
         let literal = false;
+        let literal_val;
+        if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
+            variable = true;
+            literal = true;
+            literal_val = num_to_bin(this.vars[this.token.literal]);
+            reg2 = "";
+        }
         if (reg2 == null) {
             literal = true;
             literal_val = num_to_bin(this.token.literal);
@@ -604,7 +622,7 @@ class Compiler {
             this.advance();
         }
 
-        if (memaddr) {
+        if (memaddr || variable) {
             out.push("1" + reg)
         } else {
             out.push("0" + reg)
