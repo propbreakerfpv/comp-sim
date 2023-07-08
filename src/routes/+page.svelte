@@ -106,7 +106,7 @@
         rc = 0;
         rd = 0;
         pc = 0;
-        sp = 0;
+        sp = ram_size - 1;
         ir = 0;
         fr = 0;
         cursor = 0;
@@ -153,7 +153,7 @@
     }
     async function loop2() {
         while (running) {
-            if (pc >= ram.length) {
+            if (pc >= ram.length - 1) {
                 break;
             }
             ir = ram[pc];
@@ -229,7 +229,9 @@
                     break;
                 case 8:
                     // pop
-                    sp ++;
+                    if (sp < ram_size - 1) {
+                        sp ++;
+                    }
                     set_reg(arg2, ram[sp]);
                     break;
                 case 9:
