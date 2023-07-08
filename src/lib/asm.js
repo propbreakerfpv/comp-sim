@@ -393,7 +393,7 @@ class Compiler {
         } else if (this.token.token_type == "JNZ") {
             return this.compile_jnz();
         } else if (this.token.token_type == "JZ") {
-            return this.compile_jnz();
+            return this.compile_jz();
         }
     }
     compile_ident() {

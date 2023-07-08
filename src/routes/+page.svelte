@@ -239,12 +239,12 @@
                     pc = get_arg_value(arg1, arg2);
                     break;
                 case 10:
-                    if (fr == 1) {
+                    if (fr == 0) {
                         pc = get_arg_value(arg1, arg2);
                     }
                     break;
                 case 11:
-                    if (fr == 0) {
+                    if (fr == 1) {
                         pc = get_arg_value(arg1, arg2);
                     }
                     break;
