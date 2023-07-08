@@ -673,7 +673,12 @@ class Compiler {
         }
         let num = num_to_bin(this.token.literal);
         if (num == null) {
-            num = "0" + get_reg(this.token.literal, 7)
+            if (this.token.token_type == "IDENT" && this.vars[this.token.literal] != undefined) {
+                let v = num_to_bin(this.vars[this.token.literal]);
+                num = "1" + create_zeros(7 - v.length) + v;
+            } else {
+                num = "0" + get_reg(this.token.literal, 7)
+            }
         } else {
             num = "1" + create_zeros(7 - num.length) + num;
         }
