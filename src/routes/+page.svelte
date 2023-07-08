@@ -136,6 +136,7 @@
         let key = Number("0b" + memadr.toString(2) + "0");
         key = Number("0b" + memadr.toString(2) + "0") | literal;
         console.log(key, arg2.toString(2));
+        arg2 = arg2 & 0b0111_1111;
         switch (key) {
             case 0:
                 return get_reg(arg2);
